@@ -24,8 +24,24 @@ for arg in "$@"; do
     esac
 done
 
+# Default environment profile when neither PROFILE nor .env is set (DEV | PROD)
+DEFAULT_PROFILE="PROD"
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STOP_SCRIPT="$ROOT_DIR/stop.sh"
+ENV_FILE="$ROOT_DIR/.env"
+
+RESOLVED_PROFILE="${PROFILE:-}"
+if [ -z "$RESOLVED_PROFILE" ] && [ -f "$ENV_FILE" ]; then
+    RESOLVED_PROFILE=$(grep -E '^\s*PROFILE\s*=' "$ENV_FILE" | head -n 1 | sed -E 's/^\s*PROFILE\s*=\s*([^[:space:]#]+).*/\1/' | tr '[:lower:]' '[:upper:]' || true)
+fi
+RESOLVED_PROFILE="${RESOLVED_PROFILE:-$DEFAULT_PROFILE}"
+
+if [ "$RESOLVED_PROFILE" = "PROD" ] || [ "$RESOLVED_PROFILE" = "PRODUCTION" ]; then
+    CONFIG_FILE="config/prod.json"
+else
+    CONFIG_FILE="config/default.json"
+fi
 
 export PATH="$HOME/flutter/bin:$PATH"
 
@@ -110,8 +126,8 @@ flutter analyze --no-pub
 flutter test --no-pub
 
 if [ "$SKIP_APK" -eq 0 ] && [ "$INCLUDE_MOBILE" -eq 1 ] && [ -d "$ROOT_DIR/android" ]; then
-    echo "[Phase 5] Building Mobile (Flutter AOT Release APK)..."
-    flutter build apk --release --split-per-abi --dart-define-from-file=config/prod.json
+    echo "[Phase 5] Building Mobile (Flutter AOT Release APK, Profile: $RESOLVED_PROFILE -> $CONFIG_FILE)..."
+    flutter build apk --release --split-per-abi --dart-define-from-file="$CONFIG_FILE"
     echo "  [✔] Mobile ARM64 Release APK built successfully!"
 fi
 

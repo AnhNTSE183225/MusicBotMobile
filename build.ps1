@@ -21,15 +21,43 @@ param(
     [switch]$SkipFrontend,
     [switch]$SkipBackend,
     [switch]$IncludeMobile,
-    [switch]$SkipApk
+    [switch]$SkipApk,
+    [string]$Profile = ""
 )
 
 $ErrorActionPreference = "Stop"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
 
+# Default environment profile when neither -Profile nor .env is set (DEV | PROD)
+$DEFAULT_PROFILE = "PROD"
+
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $stopScript = Join-Path $root "stop.ps1"
+$envFile = Join-Path $root ".env"
+
+# Resolve PROFILE from CLI param -> .env -> $env:PROFILE -> $DEFAULT_PROFILE
+$resolvedProfile = $Profile
+if (-not $resolvedProfile -and (Test-Path $envFile)) {
+    foreach ($line in (Get-Content $envFile)) {
+        if ($line -match '^\s*PROFILE\s*=\s*([^\s#]+)') {
+            $resolvedProfile = $Matches[1].Trim().ToUpper()
+            break
+        }
+    }
+}
+if (-not $resolvedProfile -and $env:PROFILE) {
+    $resolvedProfile = $env:PROFILE.Trim().ToUpper()
+}
+if (-not $resolvedProfile) {
+    $resolvedProfile = $DEFAULT_PROFILE
+}
+
+$configFile = if ($resolvedProfile -eq "PROD" -or $resolvedProfile -eq "PRODUCTION") {
+    "config/prod.json"
+} else {
+    "config/default.json"
+}
 
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
 
@@ -205,10 +233,10 @@ Write-Host ""
 # ------------------------------------------------------------------------------
 $androidDir = Join-Path $root "android"
 if (-not $SkipApk -and (Test-Path $androidDir) -and ($IncludeMobile -or $env:ANDROID_HOME)) {
-    Write-Host "[Phase 5] Building Flutter AOT Release APK (--split-per-abi)..." -ForegroundColor Blue
+    Write-Host "[Phase 5] Building Flutter AOT Release APK (--split-per-abi, Profile: $resolvedProfile -> $configFile)..." -ForegroundColor Blue
     Push-Location $root
     try {
-        & flutter build apk --release --split-per-abi --dart-define-from-file=config/prod.json
+        & flutter build apk --release --split-per-abi --dart-define-from-file=$configFile
         if ($LASTEXITCODE -ne 0) {
             Write-Host "  [!] Note: Android APK gradle build returned $LASTEXITCODE (verify Android SDK licenses via 'flutter doctor --android-licenses')." -ForegroundColor Yellow
         } else {

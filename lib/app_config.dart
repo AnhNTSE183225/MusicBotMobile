@@ -1,5 +1,5 @@
 abstract final class AppConfig {
-  static const String env = String.fromEnvironment('ENV', defaultValue: 'dev');
+  static const String env = String.fromEnvironment('ENV', defaultValue: 'prod');
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: 'https://theanh.tail38dac5.ts.net/api',

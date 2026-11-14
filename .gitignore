@@ -5,6 +5,7 @@ RESULTS.md
 .agents/
 .cursor/
 .harness/
+.env
 
 # Process Lifecycle & Logs
 .pids
