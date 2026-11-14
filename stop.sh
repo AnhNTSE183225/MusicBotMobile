@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# Deterministic PID Stop Script (Bash / Linux / macOS) — MusicBotMobile
+# ==============================================================================
+# Stops running application services deterministically using the stored .pids
+# file written by ./start.sh, with fallback port & process-tree cleanup.
+#
+# Usage:
+#   ./stop.sh           # Stop services by stored PID and clean up .pids
+#   ./stop.sh --quiet   # Suppress non-essential output (used by build/start)
+# ==============================================================================
+
+set -euo pipefail
+
+QUIET=0
+for arg in "$@"; do
+    case "$arg" in
+        --quiet|-q) QUIET=1 ;;
+    esac
+done
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PID_FILE="$ROOT_DIR/.pids"
+FALLBACK_PORTS=(8090)
+
+log_msg() {
+    if [ "$QUIET" -eq 0 ]; then
+        echo "$1"
+    fi
+}
+
+stop_pid_tree() {
+    local target_pid="$1"
+    local label="$2"
+    if [ -z "$target_pid" ] || [ "$target_pid" -le 1 ] 2>/dev/null; then
+        return 1
+    fi
+    if ! kill -0 "$target_pid" 2>/dev/null; then
+        log_msg "  [$label] PID $target_pid is already stopped."
+        return 1
+    fi
+
+    log_msg "  [$label] Stopping process tree for PID $target_pid..."
+    pkill -TERM -P "$target_pid" 2>/dev/null || true
+    kill -TERM "$target_pid" 2>/dev/null || true
+    sleep 0.2
+    if kill -0 "$target_pid" 2>/dev/null; then
+        pkill -KILL -P "$target_pid" 2>/dev/null || true
+        kill -KILL "$target_pid" 2>/dev/null || true
+    fi
+    return 0
+}
+
+STOPPED_ANY=0
+
+if [ -f "$PID_FILE" ]; then
+    log_msg "Reading stored PIDs from $PID_FILE..."
+    # shellcheck disable=SC1090
+    source "$PID_FILE" || true
+
+    if [ -n "${MOBILE_PID:-}" ]; then
+        stop_pid_tree "$MOBILE_PID" "Mobile" && STOPPED_ANY=1 || true
+    fi
+    if [ -n "${FRONTEND_PID:-}" ]; then
+        stop_pid_tree "$FRONTEND_PID" "Frontend" && STOPPED_ANY=1 || true
+    fi
+    if [ -n "${BACKEND_PID:-}" ]; then
+        stop_pid_tree "$BACKEND_PID" "Backend" && STOPPED_ANY=1 || true
+    fi
+    if [ -n "${MOBILE_PORT:-}" ]; then
+        FALLBACK_PORTS+=("$MOBILE_PORT")
+    fi
+
+    rm -f "$PID_FILE"
+    log_msg "  Removed PID state file ($PID_FILE)."
+else
+    log_msg "No .pids file found at $PID_FILE. Checking for orphaned port listeners..."
+fi
+
+if command -v lsof &>/dev/null; then
+    for port in "${FALLBACK_PORTS[@]}"; do
+        pids=$(lsof -ti :"$port" 2>/dev/null || true)
+        for pid in $pids; do
+            stop_pid_tree "$pid" "Orphaned Port $port" && STOPPED_ANY=1 || true
+        done
+    done
+fi
+
+if [ "$STOPPED_ANY" -eq 1 ]; then
+    sleep 0.2
+    log_msg "[✔] All MusicBotMobile services stopped cleanly."
+else
+    log_msg "[✔] No active MusicBotMobile services were running."
+fi

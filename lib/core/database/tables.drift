@@ -1,0 +1,46 @@
+CREATE TABLE cached_queue_tracks (
+  guild_id TEXT NOT NULL,
+  track_index INT NOT NULL,
+  track_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  artist TEXT NOT NULL,
+  album TEXT NOT NULL,
+  image TEXT NOT NULL,
+  duration REAL NOT NULL,
+  requested_by TEXT NOT NULL,
+  requested_avatar TEXT,
+  url TEXT,
+  is_current BOOLEAN NOT NULL DEFAULT FALSE,
+  updated_at INT NOT NULL,
+  PRIMARY KEY (guild_id, track_index, is_current)
+);
+
+CREATE TABLE lyric_offsets (
+  track_title TEXT NOT NULL PRIMARY KEY,
+  offset_seconds REAL NOT NULL DEFAULT 0.0,
+  updated_at INT NOT NULL
+);
+
+CREATE TABLE read_patch_versions (
+  version TEXT NOT NULL PRIMARY KEY,
+  read_at INT NOT NULL
+);
+
+CREATE TABLE cached_schedule_events (
+  event_id TEXT NOT NULL PRIMARY KEY,
+  guild_id TEXT NOT NULL,
+  payload_json TEXT NOT NULL,
+  updated_at INT NOT NULL
+);
+
+CREATE TABLE app_kv_settings (
+  setting_key TEXT NOT NULL PRIMARY KEY,
+  setting_value TEXT NOT NULL
+);
+
+getQueueForGuild: SELECT * FROM cached_queue_tracks WHERE guild_id = :guildId AND is_current = FALSE ORDER BY track_index ASC;
+getCurrentTrackForGuild: SELECT * FROM cached_queue_tracks WHERE guild_id = :guildId AND is_current = TRUE LIMIT 1;
+getLyricOffset: SELECT offset_seconds FROM lyric_offsets WHERE track_title = :trackTitle LIMIT 1;
+getAllReadPatchVersions: SELECT version FROM read_patch_versions;
+getCachedScheduleForGuild: SELECT payload_json FROM cached_schedule_events WHERE guild_id = :guildId;
+getKvSetting: SELECT setting_value FROM app_kv_settings WHERE setting_key = :key LIMIT 1;

@@ -1,0 +1,52 @@
+AGENTS.md
+INSTRUCTIONS.md
+RESULTS.md
+.agent/
+.agents/
+.cursor/
+.harness/
+
+# Process Lifecycle & Logs
+.pids
+*.log
+
+# Flutter / Dart Build & Tooling Outputs
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+coverage/
+
+# Compile-Time Generated Code (rebuilt by build.ps1 / build.sh via build_runner)
+**/*.g.dart
+**/*.freezed.dart
+**/*.drift.dart
+
+# IDE & Metadata Files
+.idea/
+.vscode/
+*.iml
+.metadata
+pubspec.lock
+
+# Android Build & Local Artifacts
+android/.gradle/
+android/captures/
+android/local.properties
+android/GeneratedPluginRegistrant.java
+android/key.properties
+*.jks
+*.keystore
+
+# iOS Build & CocoaPods Artifacts
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/App.framework
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Flutter/ephemeral/
+ios/Runner/GeneratedPluginRegistrant.*

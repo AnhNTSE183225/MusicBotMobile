@@ -1,0 +1,55 @@
+﻿name: musicbot_mobile
+description: Ultra-low overhead 120Hz Impeller + Dart AOT mobile client for MusicBot & MusicBotUI.
+publish_to: "none"
+version: 1.5.2+1
+
+environment:
+  sdk: ^3.8.0
+  flutter: ">=3.24.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # 1. Fine-Grained Reactivity (SolidJS-style Signals)
+  signals_flutter: ^5.5.0
+
+  # 2. Routing & Hardware-Accelerated Animations
+  go_router: ^14.2.0
+  flutter_animate: ^4.5.0
+
+  # 3. Local Persistence (C FFI SQLite in WAL Mode on Background Isolate)
+  drift: ^2.20.0
+  sqlite3_flutter_libs: ^0.5.24
+  path_provider: ^2.1.4
+  path: ^1.9.0
+
+  # 4. Networking, Serialization & Hardware Keystore
+  dio: ^5.7.0
+  json_annotation: ^4.12.0
+  flutter_secure_storage: ^9.2.2
+  url_launcher: ^6.3.0
+  intl: ^0.19.0
+
+  # 5. Structured Telemetry
+  logging: ^1.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+  # Compile-Time Code Generators (Zero Runtime Reflection)
+  build_runner: ^2.4.12
+  drift_dev: ^2.20.0
+  json_serializable: ^6.8.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/ocean-drive.jpg
+    - assets/sundown.jpg
+    - assets/coastline.jpg
+    - assets/logo_icon.svg
+    - assets/logo_full.svg
+

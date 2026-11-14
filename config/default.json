@@ -1,0 +1,8 @@
+{
+  "ENV": "dev",
+  "API_BASE_URL": "http://10.0.2.2:8000/api",
+  "WS_BASE_URL": "ws://10.0.2.2:8000/ws",
+  "LOGIN_URL": "http://10.0.2.2:8000/login",
+  "FRONTEND_URL": "http://localhost:3000",
+  "SQLITE_DB_NAME": "musicbot_local.db"
+}

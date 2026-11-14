@@ -1,0 +1,8 @@
+{
+  "ENV": "prod",
+  "API_BASE_URL": "https://theanh.tail38dac5.ts.net/api",
+  "WS_BASE_URL": "wss://theanh.tail38dac5.ts.net/ws",
+  "LOGIN_URL": "https://theanh.tail38dac5.ts.net/login",
+  "FRONTEND_URL": "https://musicbotui.pages.dev",
+  "SQLITE_DB_NAME": "musicbot_prod.db"
+}
