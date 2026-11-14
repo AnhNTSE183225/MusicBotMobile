@@ -146,7 +146,10 @@ class ApiClient {
     };
   }
 
-  Future<Map<String, dynamic>> get(String endpoint) async {
+  Future<Map<String, dynamic>> get(
+    String endpoint, {
+    Map<String, dynamic>? queryParameters,
+  }) async {
     final headers = await _buildHeaders();
     final url = '$_apiBaseUrl$endpoint';
     Object? lastErr;
@@ -154,6 +157,7 @@ class ApiClient {
       try {
         final res = await _dio.get<String>(
           url,
+          queryParameters: queryParameters,
           options: Options(headers: headers),
         );
         return await decodeJsonMap(res.data ?? '{}');

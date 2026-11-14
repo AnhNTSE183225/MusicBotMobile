@@ -4,6 +4,7 @@ import 'package:signals_flutter/signals_flutter.dart';
 import '../components/ai_assistant_modal.dart';
 import '../components/connection_dialogs.dart';
 import '../components/glass_panel.dart';
+import '../components/musicbot_logo.dart';
 import '../components/patch_notes_modal.dart';
 import '../components/player_panel.dart';
 import '../components/playlist_modal.dart';
@@ -338,37 +339,9 @@ class _TopNavigationHeader extends StatelessWidget {
               spacing: 10,
               runSpacing: 6,
               children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color:
-                            AppThemeTokens.accentGreen.withValues(alpha: 0.16),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: AppThemeTokens.accentGreen
-                              .withValues(alpha: 0.45),
-                        ),
-                      ),
-                      child: const Icon(
-                        Icons.graphic_eq_rounded,
-                        size: 18,
-                        color: AppThemeTokens.accentGreen,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Music Bot',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: AppThemeTokens.textPrimary,
-                      ),
-                    ),
-                  ],
+                const MusicBotBrandWordmark(
+                  iconSize: 28,
+                  fontSize: 16,
                 ),
                 if (guilds.isNotEmpty)
                   Container(

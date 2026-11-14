@@ -1,4 +1,5 @@
 import 'dart:developer' as dev;
+import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
 
 abstract final class AppLogger {
@@ -10,6 +11,8 @@ abstract final class AppLogger {
     _initialized = true;
     Logger.root.level = Level.ALL;
     Logger.root.onRecord.listen((record) {
+      final line = '[${record.level.name}] ${record.loggerName}: ${record.message}';
+      debugPrint(line);
       dev.log(
         record.message,
         time: record.time,
@@ -27,6 +30,7 @@ abstract final class AppLogger {
     required String toState,
     required String reason,
   }) {
+    init();
     final msg = '[FSM] Entity $entityId: $fromState -> $toState (Reason: $reason)';
     dev.log(msg, name: 'state_machine');
     _logger.info(msg);

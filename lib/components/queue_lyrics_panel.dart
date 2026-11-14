@@ -5,6 +5,7 @@ import '../models/state_machine_dto.dart';
 import '../stores/ai_store.dart';
 import '../stores/room_store.dart';
 import 'glass_panel.dart';
+import 'musicbot_logo.dart';
 import 'sliding_segmented_pill.dart';
 
 /// Right/Bottom Queue & Synchronized Lyrics Panel matching MusicBotUI.
@@ -475,6 +476,43 @@ class _PaginatedQueueView extends StatelessWidget {
                                 ),
                               ],
                             ),
+                            if (track.requester != null &&
+                                track.requester!.isNotEmpty) ...[
+                              const SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  if (track.requester == 'AI Auto-Queue') ...[
+                                    const Padding(
+                                      padding: EdgeInsets.only(right: 4),
+                                      child: MusicBotLogoIcon(size: 11),
+                                    ),
+                                    const Flexible(
+                                      child: Text(
+                                        'AI Auto-Queue',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFFD8B4FE),
+                                        ),
+                                      ),
+                                    ),
+                                  ] else
+                                    Flexible(
+                                      child: Text(
+                                        'Added by ${track.requester}',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                          color: AppThemeTokens.textMuted,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ],
                           ],
                         ),
                       ),

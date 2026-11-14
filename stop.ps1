@@ -66,6 +66,14 @@ if (Test-Path $pidFile) {
                 }
             }
         }
+        if ($pidData.device_id -and $pidData.app_id) {
+            $adbExe = Join-Path $env:LOCALAPPDATA "Android\Sdk\platform-tools\adb.exe"
+            if (Test-Path $adbExe) {
+                Write-StopLog "  [Device] Stopping $($pidData.app_id) on $($pidData.device_id)..." "Yellow"
+                & $adbExe -s $pidData.device_id shell am force-stop $pidData.app_id 2>$null
+                $stoppedAny = $true
+            }
+        }
         if ($pidData.mobile_port -and ($FallbackPorts -notcontains [int]$pidData.mobile_port)) {
             $FallbackPorts += [int]$pidData.mobile_port
         }

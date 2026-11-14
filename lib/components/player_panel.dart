@@ -3,6 +3,7 @@ import 'package:signals_flutter/signals_flutter.dart';
 import '../models/state_machine_dto.dart';
 import '../stores/room_store.dart';
 import 'glass_panel.dart';
+import 'musicbot_logo.dart';
 import 'status_badge.dart';
 
 /// Left/Top Playback Deck matching MusicBotUI's PlayerPanel.
@@ -482,10 +483,9 @@ class _RequesterPill extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (isAi)
-            const Icon(
-              Icons.auto_awesome_rounded,
-              size: 13,
-              color: AppThemeTokens.accentPurple,
+            const Padding(
+              padding: EdgeInsets.only(right: 2),
+              child: MusicBotLogoIcon(size: 14),
             )
           else if (avatarUrl != null && avatarUrl!.isNotEmpty)
             ClipOval(

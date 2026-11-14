@@ -6,6 +6,8 @@ import '../network/api_client.dart';
 abstract interface class AuthGateway {
   String get loginUrl;
   String get apiBaseUrl;
+  String buildMobileLoginUrl(String mobileState);
+  Future<String?> pollMobileAuth(String mobileState);
   void updateServerUrl(String baseUrl);
   Future<String?> getStoredToken();
   Future<void> saveToken(String token);
@@ -80,6 +82,30 @@ class LiveMusicRepository
 
   @override
   String get apiBaseUrl => _client.apiBaseUrl;
+
+  @override
+  String buildMobileLoginUrl(String mobileState) {
+    final base = _client.loginUrl;
+    final sep = base.contains('?') ? '&' : '?';
+    return '$base${sep}platform=mobile&mobile_state=${Uri.encodeQueryComponent(mobileState)}';
+  }
+
+  @override
+  Future<String?> pollMobileAuth(String mobileState) async {
+    try {
+      final res = await _client.get(
+        '/auth/mobile/poll',
+        queryParameters: {'state': mobileState},
+      );
+      if (res['authenticated'] == true && res['token'] != null) {
+        final token = res['token'].toString().trim();
+        if (token.isNotEmpty) return token;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
 
   @override
   void updateServerUrl(String baseUrl) {

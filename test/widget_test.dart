@@ -70,6 +70,13 @@ class FakeMusicGateway
   String get loginUrl => 'http://localhost:8000/api/login';
 
   @override
+  String buildMobileLoginUrl(String mobileState) =>
+      'http://localhost:8000/api/login?platform=mobile&mobile_state=$mobileState';
+
+  @override
+  Future<String?> pollMobileAuth(String mobileState) async => _token;
+
+  @override
   void updateServerUrl(String baseUrl) {
     _serverUrl = baseUrl;
   }

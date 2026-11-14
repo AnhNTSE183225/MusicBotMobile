@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:signals_flutter/signals_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../stores/auth_store.dart';
 import 'glass_panel.dart';
@@ -285,7 +286,7 @@ class ContributeDialog extends StatelessWidget {
   }
 }
 
-class AuthConfigDialog extends StatefulWidget {
+class AuthConfigDialog extends StatelessWidget {
   final AuthStore authStore;
   final VoidCallback onAuthenticated;
 
@@ -296,189 +297,211 @@ class AuthConfigDialog extends StatefulWidget {
   });
 
   @override
-  State<AuthConfigDialog> createState() => _AuthConfigDialogState();
-}
-
-class _AuthConfigDialogState extends State<AuthConfigDialog> {
-  late final TextEditingController _serverController;
-  late final TextEditingController _tokenController;
-
-  @override
-  void initState() {
-    super.initState();
-    _serverController =
-        TextEditingController(text: widget.authStore.serverBaseUrl.value);
-    _tokenController = TextEditingController();
-  }
-
-  @override
-  void dispose() {
-    _serverController.dispose();
-    _tokenController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final authStore = widget.authStore;
-
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 460),
+        constraints: const BoxConstraints(maxWidth: 420),
         child: GlassPanel(
           backgroundColor: const Color(0xF511171D),
           padding: const EdgeInsets.all(20),
           child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.security_rounded,
-                      color: AppThemeTokens.accentGreen,
-                      size: 22,
+            child: Watch((context) {
+              final user = authStore.currentUser.value;
+              final isWaiting = authStore.isWaitingForOAuth.value;
+              final isAuthenticated = authStore.isAuthenticated.value;
+
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.security_rounded,
+                        color: AppThemeTokens.accentGreen,
+                        size: 22,
+                      ),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Text(
+                          'Discord Authentication',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: AppThemeTokens.textPrimary,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () {
+                          authStore.cancelMobileDiscordLogin();
+                          Navigator.of(context).pop();
+                        },
+                        icon: const Icon(
+                          Icons.close_rounded,
+                          color: AppThemeTokens.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Connect with your Discord account to join voice channels, control music playback, and access server schedules.',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppThemeTokens.textSecondary,
+                      height: 1.4,
                     ),
-                    const SizedBox(width: 10),
-                    const Expanded(
-                      child: Text(
-                        'Discord Session & Server',
-                        style: TextStyle(
-                          fontSize: 16,
+                  ),
+                  const SizedBox(height: 16),
+                  if (isAuthenticated && user != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppThemeTokens.accentGreen.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: AppThemeTokens.accentGreen.withValues(alpha: 0.35),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.verified_user_rounded,
+                            color: AppThemeTokens.accentGreen,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Signed in as @${user.username}',
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppThemeTokens.textPrimary,
+                                  ),
+                                ),
+                                const Text(
+                                  'Active Discord session connected',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: AppThemeTokens.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () async {
+                              await authStore.logout();
+                            },
+                            child: const Text(
+                              'Log Out',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: AppThemeTokens.accentRose,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                  ],
+                  if (isWaiting) ...[
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF5865F2).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: const Color(0xFF5865F2).withValues(alpha: 0.45),
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          const Row(
+                            children: [
+                              SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.2,
+                                  color: Color(0xFF5865F2),
+                                ),
+                              ),
+                              SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'Waiting for Discord authorization in app or browser...',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppThemeTokens.textPrimary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: authStore.cancelMobileDiscordLogin,
+                              child: const Text(
+                                'Cancel',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppThemeTokens.textSecondary,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ] else ...[
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        await authStore.startMobileDiscordLogin(
+                          onAuthenticated: () {
+                            onAuthenticated();
+                            if (context.mounted) {
+                              Navigator.of(context).pop();
+                            }
+                          },
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF5865F2),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      icon: const Icon(Icons.discord_rounded, size: 20),
+                      label: Text(
+                        isAuthenticated
+                            ? 'Switch Discord Account'
+                            : 'Continue with Discord',
+                        style: const TextStyle(
+                          fontSize: 13,
                           fontWeight: FontWeight.w800,
-                          color: AppThemeTokens.textPrimary,
                         ),
                       ),
                     ),
-                    IconButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(
-                        Icons.close_rounded,
-                        color: AppThemeTokens.textSecondary,
-                      ),
-                    ),
                   ],
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'BACKEND API URL',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    color: AppThemeTokens.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: _serverController,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppThemeTokens.textPrimary,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: 'https://theanh.tail38dac5.ts.net/api',
-                    filled: true,
-                    fillColor: AppThemeTokens.bgInput,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide:
-                          const BorderSide(color: AppThemeTokens.borderSubtle),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                ElevatedButton.icon(
-                  onPressed: () async {
-                    await authStore
-                        .updateServerBaseUrl(_serverController.text);
-                    await launchUrl(
-                      Uri.parse(authStore.loginUrl),
-                      mode: LaunchMode.externalApplication,
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF5865F2),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  icon: const Icon(Icons.open_in_browser_rounded, size: 18),
-                  label: const Text(
-                    'Open Discord OAuth2 in Browser',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                const Text(
-                  'SESSION TOKEN (FROM OAUTH REDIRECT OR WEB APP)',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    color: AppThemeTokens.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: _tokenController,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppThemeTokens.textPrimary,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: 'Paste ?token=... session token here',
-                    filled: true,
-                    fillColor: AppThemeTokens.bgInput,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide:
-                          const BorderSide(color: AppThemeTokens.borderSubtle),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                ElevatedButton(
-                  onPressed: () async {
-                    await authStore
-                        .updateServerBaseUrl(_serverController.text);
-                    if (_tokenController.text.trim().isNotEmpty) {
-                      final ok =
-                          await authStore.loginWithToken(_tokenController.text);
-                      if (ok && context.mounted) {
-                        widget.onAuthenticated();
-                        Navigator.of(context).pop();
-                      }
-                    } else if (context.mounted) {
-                      Navigator.of(context).pop();
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppThemeTokens.accentGreen,
-                    foregroundColor: AppThemeTokens.bgDeep,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text(
-                    'Save & Connect',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
-                  ),
-                ),
-              ],
-            ),
+                ],
+              );
+            }),
           ),
         ),
       ),

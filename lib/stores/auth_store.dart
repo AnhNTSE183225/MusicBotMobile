@@ -1,4 +1,8 @@
+import 'dart:async';
+import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:signals_flutter/signals_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../core/database/app_database.dart';
 import '../core/repositories/music_repository.dart';
 import '../models/music_models.dart';
@@ -14,6 +18,11 @@ class AuthStore {
   late final ReadonlySignal<UserProfile?> currentUser;
   late final ReadonlySignal<bool> isAuthenticated;
   final Signal<String> serverBaseUrl = signal('');
+  final Signal<bool> isWaitingForOAuth = signal(false);
+
+  Timer? _oauthPollTimer;
+  String? _pendingMobileState;
+  VoidCallback? _onOAuthSuccessCallback;
 
   AuthStore({
     required AuthGateway authGateway,
@@ -23,7 +32,13 @@ class AuthStore {
     serverBaseUrl.value = _authGateway.apiBaseUrl;
     authFsm = StatefulEntityController<UserProfile>(
       id: 'auth_session',
-      onForegroundResync: () => verifySession(),
+      onForegroundResync: () {
+        if (_pendingMobileState != null) {
+          _checkPendingMobileOAuth();
+        } else {
+          verifySession();
+        }
+      },
     );
     status = authFsm.status;
     currentUser = authFsm.activeData;
@@ -90,11 +105,75 @@ class AuthStore {
     }
   }
 
+  /// Launches the mobile-aware Discord OAuth2 flow (?platform=mobile&mobile_state=...)
+  /// which opens the Discord mobile app or system browser and redirects back to
+  /// `musicbot://auth-callback?token=...` (plus polls `/api/auth/mobile/poll` automatically).
+  Future<void> startMobileDiscordLogin({VoidCallback? onAuthenticated}) async {
+    _cancelOAuthPoll();
+    final rand = Random.secure().nextInt(1 << 30).toRadixString(16);
+    final stateId = 'mob_${DateTime.now().millisecondsSinceEpoch}_$rand';
+    _pendingMobileState = stateId;
+    _onOAuthSuccessCallback = onAuthenticated;
+    isWaitingForOAuth.value = true;
+
+    final mobileLoginUri =
+        Uri.parse(_authGateway.buildMobileLoginUrl(stateId));
+    await launchUrl(
+      mobileLoginUri,
+      mode: LaunchMode.externalApplication,
+    );
+
+    var ticks = 0;
+    _oauthPollTimer = Timer.periodic(
+      const Duration(milliseconds: 1500),
+      (_) async {
+        ticks++;
+        if (ticks > 120) {
+          cancelMobileDiscordLogin();
+          return;
+        }
+        await _checkPendingMobileOAuth();
+      },
+    );
+  }
+
+  Future<void> _checkPendingMobileOAuth() async {
+    final stateId = _pendingMobileState;
+    if (stateId == null) return;
+    final token = await _authGateway.pollMobileAuth(stateId);
+    if (token != null && token.isNotEmpty) {
+      final cb = _onOAuthSuccessCallback;
+      _cancelOAuthPoll();
+      final ok = await loginWithToken(token);
+      if (ok && cb != null) {
+        cb();
+      }
+    }
+  }
+
+  void cancelMobileDiscordLogin() {
+    _cancelOAuthPoll();
+  }
+
+  void _cancelOAuthPoll() {
+    _oauthPollTimer?.cancel();
+    _oauthPollTimer = null;
+    _pendingMobileState = null;
+    _onOAuthSuccessCallback = null;
+    isWaitingForOAuth.value = false;
+  }
+
   Future<bool> loginWithToken(String token) async {
     final trimmed = token.trim();
     if (trimmed.isEmpty) return false;
+    final cb = _onOAuthSuccessCallback;
+    _cancelOAuthPoll();
     await _authGateway.saveToken(trimmed);
-    return verifySession();
+    final ok = await verifySession();
+    if (ok && cb != null) {
+      cb();
+    }
+    return ok;
   }
 
   Future<void> updateServerBaseUrl(String newBaseUrl) async {
@@ -106,6 +185,7 @@ class AuthStore {
   }
 
   Future<void> logout() async {
+    _cancelOAuthPoll();
     await _authGateway.logout();
     authFsm.transitionTo(
       EntityStatus.idle,
@@ -114,7 +194,9 @@ class AuthStore {
   }
 
   void dispose() {
+    _cancelOAuthPoll();
     authFsm.dispose();
     serverBaseUrl.dispose();
+    isWaitingForOAuth.dispose();
   }
 }

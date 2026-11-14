@@ -4,6 +4,7 @@ import 'core/database/app_database.dart';
 import 'core/network/api_client.dart';
 import 'core/repositories/music_repository.dart';
 import 'core/repositories/schedule_repository.dart';
+import 'core/telemetry/logger.dart';
 import 'router.dart';
 import 'stores/ai_store.dart';
 import 'stores/auth_store.dart';
@@ -13,6 +14,7 @@ import 'stores/schedule_store.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  AppLogger.init();
 
   final db = AppDatabase();
   final apiClient = ApiClient();
@@ -75,7 +77,7 @@ class MusicBotMobileApp extends StatelessWidget {
     );
 
     return MaterialApp.router(
-      title: 'Music Bot',
+      title: 'MusicBỏTúi',
       debugShowCheckedModeBanner: false,
       themeMode: ThemeMode.dark,
       darkTheme: ThemeData(

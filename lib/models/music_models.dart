@@ -638,6 +638,32 @@ class PatchNote {
 
 const List<PatchNote> kPatchNotes = [
   PatchNote(
+    version: '1.5.4',
+    date: '2026-11-14',
+    headline: 'MusicBỏTúi Visual Identity & Vector Brand Cosmetics',
+    summary:
+        'Unified visual identity with MusicBotUI frontend: vector equalizer pocket logo, dark theme splash screen, and official MusicBỏTúi Android app launcher icons.',
+    details: [
+      'Official MusicBỏTúi branding: equalizer bars, floating notes, and stitched pocket with emerald rivets directly rendered on Impeller GPU',
+      'Vector brand wordmark in header with white "Music" and vibrant emerald "#00E676" "BỏTúi"',
+      'High-resolution Android launcher mipmap icons generated from frontend SVG assets',
+      'Dark theme boot splash screen (#0B1014) replacing legacy white screen',
+      'AI Auto-Queue tracks now showcase the pocket logo icon across both Queue and Player panels',
+    ],
+  ),
+  PatchNote(
+    version: '1.5.3',
+    date: '2026-11-14',
+    headline: 'Seamless Mobile Discord OAuth2 & Deep-Link Return',
+    summary:
+        'Sign in with one tap via the Discord mobile app or system browser using the ?platform=mobile flag—returning directly to MusicBotMobile without redirecting to the web frontend.',
+    details: [
+      'One-tap "Continue with Discord" mobile authentication flow (?platform=mobile&mobile_state=...)',
+      'Backend OAuth callback detects mobile login state and triggers musicbot://auth-callback deep-link return instead of redirecting to the web frontend',
+      'Automatic background & foreground session synchronization (/api/auth/mobile/poll) so login completes seamlessly without manual token copying',
+    ],
+  ),
+  PatchNote(
     version: '1.5.2',
     date: '2026-11-05',
     headline:
