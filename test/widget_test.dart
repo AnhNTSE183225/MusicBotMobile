@@ -193,8 +193,10 @@ class FakeMusicGateway
   @override
   Future<PlaylistPreviewResponse> previewPlaylist(
     String guildId,
-    String url,
-  ) async {
+    String url, {
+    int offset = 0,
+    int limit = 20,
+  }) async {
     return const PlaylistPreviewResponse(
       title: 'Synthwave Classics',
       totalTracks: 2,
@@ -617,5 +619,29 @@ void main() {
 
     roomStore.dispose();
     await db.close();
+  });
+
+  test('QueueStateDto parses playback_error and per-track unavailable errors', () {
+    final dto = QueueStateDto.fromBackendPayload({
+      'status': 'idle',
+      'bot_connected': true,
+      'queue_index': 0,
+      'playback_error': "'Face Like Me' is unavailable or having issues: HTTP 403",
+      'queue': [
+        {
+          'title': 'Face Like Me',
+          'artist': 'Artist',
+          'duration': 104,
+          'error': 'All stream sources failed (HTTP 403)',
+        },
+      ],
+    });
+
+    expect(
+      dto.playbackError,
+      "'Face Like Me' is unavailable or having issues: HTTP 403",
+    );
+    expect(dto.queue.length, 1);
+    expect(dto.queue.first.error, 'All stream sources failed (HTTP 403)');
   });
 }

@@ -129,6 +129,7 @@ class TrackModel {
   final String? requestedAvatar;
   final int? originalIndex;
   final String? url;
+  final String? error;
 
   const TrackModel({
     this.id = '',
@@ -141,6 +142,7 @@ class TrackModel {
     this.requestedAvatar,
     this.originalIndex,
     this.url,
+    this.error,
   });
 
   String? get thumbnail => image.isEmpty ? null : image;
@@ -186,6 +188,7 @@ class TrackModel {
       requestedAvatar: reqAvatar,
       originalIndex: index,
       url: (map['webpage_url'] ?? map['url'])?.toString(),
+      error: map['error']?.toString(),
     );
   }
 
@@ -234,6 +237,8 @@ class QueueStateDto {
   final String? aiSetByName;
   @JsonKey(name: 'ai_set_by_avatar')
   final String? aiSetByAvatar;
+  @JsonKey(name: 'playback_error')
+  final String? playbackError;
 
   const QueueStateDto({
     this.status = EntityStatus.idle,
@@ -256,6 +261,7 @@ class QueueStateDto {
     this.aiPrompt = '',
     this.aiSetByName,
     this.aiSetByAvatar,
+    this.playbackError,
   });
 
   List<TrackModel> get upcoming => queue;
@@ -299,6 +305,7 @@ class QueueStateDto {
       aiPrompt: aiPrompt,
       aiSetByName: aiSetByName,
       aiSetByAvatar: aiSetByAvatar,
+      playbackError: playbackError,
     );
   }
 
@@ -362,6 +369,7 @@ class QueueStateDto {
       aiPrompt: (raw['ai_prompt'] ?? '').toString(),
       aiSetByName: raw['ai_set_by_name']?.toString(),
       aiSetByAvatar: raw['ai_set_by_avatar']?.toString(),
+      playbackError: raw['playback_error']?.toString(),
     );
   }
 
@@ -599,6 +607,10 @@ class PlaylistPreviewResponse {
   final String thumbnail;
   @JsonKey(name: 'total_tracks', defaultValue: 0)
   final int totalTracks;
+  @JsonKey(defaultValue: 0)
+  final int offset;
+  @JsonKey(name: 'has_more', defaultValue: false)
+  final bool hasMore;
   final List<PlaylistTrack> tracks;
 
   const PlaylistPreviewResponse({
@@ -606,6 +618,8 @@ class PlaylistPreviewResponse {
     this.uploader = '',
     this.thumbnail = '',
     this.totalTracks = 0,
+    this.offset = 0,
+    this.hasMore = false,
     required this.tracks,
   });
 

@@ -200,6 +200,7 @@ class _QueueLyricsPanelState extends State<QueueLyricsPanel> {
             final isAdding =
                 roomStore.addSongFsm.status.value == EntityStatus.loading;
             final pendingQuery = roomStore.addSongFsm.activeData.value ?? '';
+            final activeError = roomStore.trackError.value;
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
@@ -378,6 +379,68 @@ class _QueueLyricsPanelState extends State<QueueLyricsPanel> {
                         ],
                       ),
                     ),
+                  if (activeError != null && activeError.isNotEmpty)
+                    Container(
+                      margin: const EdgeInsets.only(top: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 9,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppThemeTokens.accentRose
+                            .withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: AppThemeTokens.accentRose
+                              .withValues(alpha: 0.38),
+                        ),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Padding(
+                            padding: EdgeInsets.only(top: 1),
+                            child: Icon(
+                              Icons.warning_amber_rounded,
+                              size: 16,
+                              color: AppThemeTokens.accentRose,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Video unavailable or playback error',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppThemeTokens.accentRose,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  activeError,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: AppThemeTokens.textPrimary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          InkWell(
+                            onTap: roomStore.dismissTrackError,
+                            child: const Icon(
+                              Icons.close_rounded,
+                              size: 15,
+                              color: AppThemeTokens.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                 ],
               ),
             );
@@ -467,13 +530,21 @@ class _PaginatedQueueView extends StatelessWidget {
                 final entry = slice[idx];
                 final track = entry.track;
                 final zeroBasedIndex = entry.originalIndex;
+                final hasError =
+                    track.error != null && track.error!.trim().isNotEmpty;
 
                 return Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: const Color(0x12FFFFFF),
+                    color: hasError
+                        ? AppThemeTokens.accentRose.withValues(alpha: 0.08)
+                        : const Color(0x12FFFFFF),
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppThemeTokens.borderSubtle),
+                    border: Border.all(
+                      color: hasError
+                          ? AppThemeTokens.accentRose.withValues(alpha: 0.40)
+                          : AppThemeTokens.borderSubtle,
+                    ),
                   ),
                   child: Row(
                     children: [
@@ -600,6 +671,31 @@ class _PaginatedQueueView extends StatelessWidget {
                                         ),
                                       ),
                                     ),
+                                ],
+                              ),
+                            ],
+                            if (hasError) ...[
+                              const SizedBox(height: 3),
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.warning_amber_rounded,
+                                    size: 12,
+                                    color: AppThemeTokens.accentRose,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      'Unavailable: ${track.error}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppThemeTokens.accentRose,
+                                      ),
+                                    ),
+                                  ),
                                 ],
                               ),
                             ],

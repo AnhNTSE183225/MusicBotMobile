@@ -30,7 +30,9 @@ class RoomStore {
   final Signal<double> position = signal(0.0);
   final Signal<double> userOffset = signal(0.0);
   final Signal<String?> notice = signal(null);
+  final Signal<String?> trackError = signal(null);
   final Signal<String> songInput = signal('');
+  final Signal<bool> playlistLoadingMore = signal(false);
 
   static const int itemsPerPage = 10;
 
@@ -39,6 +41,8 @@ class RoomStore {
   Timer? _noticeTimer;
   Timer? _sseReconnectTimer;
   String? _lastTrackTitle;
+  String? _dismissedServerError;
+  String? _lastServerError;
 
   late final Computed<GuildSession?> currentGuild = computed(() {
     final id = currentGuildId.value;
@@ -232,6 +236,8 @@ class RoomStore {
     required String reason,
   }) async {
     final resolvedStatus = snapshot.resolveStatus();
+    final incomingErr = snapshot.playbackError?.trim();
+    final hasServerErr = incomingErr != null && incomingErr.isNotEmpty;
     batch(() {
       position.value = snapshot.position;
       playbackFsm.transitionTo(
@@ -239,6 +245,18 @@ class RoomStore {
         reason: reason,
         data: snapshot,
       );
+      if (resolvedStatus == EntityStatus.active) {
+        trackError.value = null;
+        _dismissedServerError = null;
+      } else if (hasServerErr) {
+        if (incomingErr != _dismissedServerError) {
+          trackError.value = incomingErr;
+        }
+      } else if (_lastServerError != null && trackError.value == _lastServerError) {
+        trackError.value = null;
+        _dismissedServerError = null;
+      }
+      _lastServerError = hasServerErr ? incomingErr : null;
       if (currentPage.value > totalPages.value) {
         currentPage.value = totalPages.value;
       }
@@ -415,15 +433,23 @@ class RoomStore {
     }
   }
 
+  void dismissTrackError() {
+    _dismissedServerError = _lastServerError;
+    trackError.value = null;
+  }
+
   Future<void> skipToQueueIndex(int zeroBasedIndex) async {
     final gid = currentGuildId.value;
     if (gid == null) return;
+    trackError.value = null;
     try {
       await _playbackQueue.skipTo(gid, zeroBasedIndex + 1);
       showNotice('Skipped to song #${zeroBasedIndex + 1}!');
       await refreshQueueSnapshot(gid);
     } catch (e) {
-      showNotice(e.toString());
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      trackError.value = msg;
+      showNotice(msg);
     }
   }
 
@@ -468,6 +494,7 @@ class RoomStore {
     }
 
     final cleanUrl = YouTubeUtils.stripPlaylistFromUrl(trimmed);
+    trackError.value = null;
     addSongFsm.transitionTo(
       EntityStatus.loading,
       reason: 'Submitting "$trimmed" to queue',
@@ -485,12 +512,14 @@ class RoomStore {
       await refreshQueueSnapshot(gid);
       return true;
     } catch (e) {
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      trackError.value = msg;
       addSongFsm.transitionTo(
         EntityStatus.error,
-        reason: 'Failed to add track: $e',
-        error: e.toString(),
+        reason: 'Failed to add track: $msg',
+        error: msg,
       );
-      showNotice(e.toString());
+      showNotice(msg);
       return false;
     }
   }
@@ -504,10 +533,15 @@ class RoomStore {
       reason: 'Fetching playlist preview',
     );
     try {
-      final preview = await _playlistGateway.previewPlaylist(gid, cleaned);
+      final preview = await _playlistGateway.previewPlaylist(
+        gid,
+        cleaned,
+        offset: 0,
+        limit: 20,
+      );
       playlistFsm.transitionTo(
         EntityStatus.active,
-        reason: 'Loaded playlist preview (${preview.totalCount} tracks)',
+        reason: 'Loaded playlist preview (${preview.tracks.length} tracks)',
         data: preview,
       );
       return preview;
@@ -518,6 +552,54 @@ class RoomStore {
         error: e.toString(),
       );
       return null;
+    }
+  }
+
+  Future<PlaylistPreviewResponse?> loadMorePlaylistTracks(String rawUrl) async {
+    final gid = currentGuildId.value;
+    final current = playlistFsm.activeData.value;
+    if (gid == null ||
+        current == null ||
+        !current.hasMore ||
+        playlistLoadingMore.value) {
+      return null;
+    }
+    final cleaned = YouTubeUtils.cleanPlaylistUrl(rawUrl.trim());
+    playlistLoadingMore.value = true;
+    try {
+      final nextPage = await _playlistGateway.previewPlaylist(
+        gid,
+        cleaned,
+        offset: current.tracks.length,
+        limit: 20,
+      );
+      final existingIndices = current.tracks.map((t) => t.index).toSet();
+      final appended = nextPage.tracks
+          .where((t) => !existingIndices.contains(t.index))
+          .toList();
+      final merged = [...current.tracks, ...appended];
+      final updated = PlaylistPreviewResponse(
+        title: current.title,
+        uploader: current.uploader,
+        thumbnail: current.thumbnail,
+        totalTracks: nextPage.totalTracks > merged.length
+            ? nextPage.totalTracks
+            : merged.length,
+        offset: nextPage.offset,
+        hasMore: nextPage.hasMore && appended.isNotEmpty,
+        tracks: merged,
+      );
+      playlistFsm.transitionTo(
+        EntityStatus.active,
+        reason: 'Loaded ${appended.length} more playlist tracks',
+        data: updated,
+      );
+      return updated;
+    } catch (e) {
+      showNotice(e.toString());
+      return null;
+    } finally {
+      playlistLoadingMore.value = false;
     }
   }
 
@@ -580,6 +662,8 @@ class RoomStore {
     position.dispose();
     userOffset.dispose();
     notice.dispose();
+    trackError.dispose();
     songInput.dispose();
+    playlistLoadingMore.dispose();
   }
 }

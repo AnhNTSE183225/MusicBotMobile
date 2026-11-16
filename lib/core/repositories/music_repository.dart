@@ -37,7 +37,12 @@ abstract interface class PlaybackQueueGateway {
 }
 
 abstract interface class PlaylistGateway {
-  Future<PlaylistPreviewResponse> previewPlaylist(String guildId, String url);
+  Future<PlaylistPreviewResponse> previewPlaylist(
+    String guildId,
+    String url, {
+    int offset = 0,
+    int limit = 20,
+  });
   Future<({int addedCount, String playlistTitle})> addPlaylistRange({
     required String guildId,
     required String title,
@@ -252,11 +257,13 @@ class LiveMusicRepository
   @override
   Future<PlaylistPreviewResponse> previewPlaylist(
     String guildId,
-    String url,
-  ) async {
+    String url, {
+    int offset = 0,
+    int limit = 20,
+  }) async {
     final raw = await _client.post(
       '/playlist/$guildId/preview',
-      body: {'url': url},
+      body: {'url': url, 'offset': offset, 'limit': limit},
     );
     return PlaylistPreviewResponse.fromJson(raw);
   }

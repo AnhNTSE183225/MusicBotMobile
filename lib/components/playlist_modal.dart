@@ -45,15 +45,25 @@ class _PlaylistModalState extends State<PlaylistModal> {
     final preview = await widget.roomStore.previewPlaylist(raw);
     if (preview != null) {
       _startIndex.value = 1;
-      _endIndex.value = preview.totalCount.clamp(1, 50);
+      _endIndex.value = preview.tracks.length.clamp(1, 50);
+    }
+  }
+
+  Future<void> _loadMore() async {
+    final raw = _urlController.text.trim();
+    final before = widget.roomStore.playlistFsm.activeData.value?.tracks.length ?? 0;
+    final updated = await widget.roomStore.loadMorePlaylistTracks(raw);
+    if (updated != null && _endIndex.value == before) {
+      _endIndex.value = updated.tracks.length;
     }
   }
 
   Future<void> _confirmImport() async {
     final preview = widget.roomStore.playlistFsm.activeData.value;
     if (preview == null) return;
-    final start = _startIndex.value.clamp(1, preview.totalCount);
-    final end = _endIndex.value.clamp(start, preview.totalCount);
+    final loadedCount = preview.tracks.length;
+    final start = _startIndex.value.clamp(1, loadedCount);
+    final end = _endIndex.value.clamp(start, loadedCount);
     final selected = preview.tracks
         .where((t) => t.index >= start && t.index <= end)
         .toList();
@@ -275,9 +285,11 @@ class _PlaylistModalState extends State<PlaylistModal> {
                     );
                   }
 
-                  final validStart = start.clamp(1, preview.totalCount);
-                  final validEnd = end.clamp(validStart, preview.totalCount);
+                  final loadedCount = preview.tracks.length;
+                  final validStart = start.clamp(1, loadedCount);
+                  final validEnd = end.clamp(validStart, loadedCount);
                   final selectedCount = validEnd - validStart + 1;
+                  final loadingMore = roomStore.playlistLoadingMore.value;
 
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -309,7 +321,9 @@ class _PlaylistModalState extends State<PlaylistModal> {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    '${preview.totalCount} tracks available • Importing #$validStart to #$validEnd ($selectedCount songs)',
+                                    preview.hasMore
+                                        ? '$loadedCount${preview.totalCount > loadedCount ? ' of ${preview.totalCount}' : '+'} loaded • Importing #$validStart to #$validEnd ($selectedCount songs)'
+                                        : '${preview.totalCount} tracks available • Importing #$validStart to #$validEnd ($selectedCount songs)',
                                     style: const TextStyle(
                                       fontSize: 11,
                                       color: AppThemeTokens.accentEmerald,
@@ -341,14 +355,14 @@ class _PlaylistModalState extends State<PlaylistModal> {
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           _PresetButton(
-                            label: 'All (${preview.totalCount})',
+                            label: 'All ($loadedCount)',
                             onTap: () {
                               _startIndex.value = 1;
-                              _endIndex.value = preview.totalCount;
+                              _endIndex.value = loadedCount;
                             },
                           ),
                           for (final count in [10, 25, 50])
-                            if (preview.totalCount > count)
+                            if (loadedCount > count)
                               _PresetButton(
                                 label: 'First $count',
                                 onTap: () {
@@ -363,10 +377,35 @@ class _PlaylistModalState extends State<PlaylistModal> {
                       // Track list preview
                       Expanded(
                         child: ListView.separated(
-                          itemCount: preview.tracks.length,
+                          itemCount: preview.tracks.length + (preview.hasMore ? 1 : 0),
                           separatorBuilder: (_, __) =>
                               const SizedBox(height: 6),
                           itemBuilder: (context, idx) {
+                            if (idx >= preview.tracks.length) {
+                              return Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: OutlinedButton(
+                                  onPressed: loadingMore ? null : _loadMore,
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor:
+                                        AppThemeTokens.accentEmerald,
+                                    side: BorderSide(
+                                      color: AppThemeTokens.accentEmerald
+                                          .withValues(alpha: 0.4),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    loadingMore
+                                        ? 'Loading more...'
+                                        : 'Load more (next 20)',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }
                             final track = preview.tracks[idx];
                             final inRange = track.index >= validStart &&
                                 track.index <= validEnd;
