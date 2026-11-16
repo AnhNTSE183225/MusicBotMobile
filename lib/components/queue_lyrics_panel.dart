@@ -197,97 +197,187 @@ class _QueueLyricsPanelState extends State<QueueLyricsPanel> {
             if (roomStore.activeTab.value != 'queue') {
               return const SizedBox.shrink();
             }
+            final isAdding =
+                roomStore.addSongFsm.status.value == EntityStatus.loading;
+            final pendingQuery = roomStore.addSongFsm.activeData.value ?? '';
+
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
-                    child: Container(
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color: AppThemeTokens.bgInput,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppThemeTokens.borderSubtle),
-                      ),
-                      child: TextField(
-                        controller: _songController,
-                        onSubmitted: (_) => _submitSingleSong(),
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: AppThemeTokens.textPrimary,
-                        ),
-                        decoration: const InputDecoration(
-                          hintText: 'Paste YouTube song URL or search title...',
-                          hintStyle: TextStyle(
-                            fontSize: 12,
-                            color: AppThemeTokens.textMuted,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: AppThemeTokens.bgInput,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isAdding
+                                  ? AppThemeTokens.accentEmerald
+                                      .withValues(alpha: 0.45)
+                                  : AppThemeTokens.borderSubtle,
+                            ),
                           ),
-                          prefixIcon: Icon(
-                            Icons.search_rounded,
+                          child: TextField(
+                            controller: _songController,
+                            enabled: !isAdding,
+                            onSubmitted: (_) => _submitSingleSong(),
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: AppThemeTokens.textPrimary,
+                            ),
+                            decoration: const InputDecoration(
+                              hintText:
+                                  'Paste YouTube song URL or search title...',
+                              hintStyle: TextStyle(
+                                fontSize: 12,
+                                color: AppThemeTokens.textMuted,
+                              ),
+                              prefixIcon: Icon(
+                                Icons.search_rounded,
+                                size: 18,
+                                color: AppThemeTokens.textMuted,
+                              ),
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ValueListenableBuilder<TextEditingValue>(
+                        valueListenable: _songController,
+                        builder: (context, value, _) {
+                          final hasText = value.text.trim().isNotEmpty;
+                          return SizedBox(
+                            height: 42,
+                            child: ElevatedButton.icon(
+                              onPressed: (isAdding || !hasText)
+                                  ? null
+                                  : _submitSingleSong,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppThemeTokens.accentGreen,
+                                disabledBackgroundColor: AppThemeTokens
+                                    .accentGreen
+                                    .withValues(alpha: 0.45),
+                                foregroundColor: AppThemeTokens.bgDeep,
+                                disabledForegroundColor: AppThemeTokens.bgDeep
+                                    .withValues(alpha: 0.8),
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              icon: isAdding
+                                  ? const SizedBox(
+                                      width: 14,
+                                      height: 14,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: AppThemeTokens.bgDeep,
+                                      ),
+                                    )
+                                  : const Icon(Icons.add_rounded, size: 18),
+                              label: Text(
+                                isAdding ? 'Adding...' : 'Add',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 8),
+                      SizedBox(
+                        height: 42,
+                        child: OutlinedButton.icon(
+                          onPressed:
+                              isAdding ? null : widget.onOpenPlaylistModal,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppThemeTokens.accentEmerald,
+                            side: BorderSide(
+                              color: AppThemeTokens.accentEmerald
+                                  .withValues(alpha: 0.45),
+                            ),
+                            backgroundColor: AppThemeTokens.accentEmerald
+                                .withValues(alpha: 0.10),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          icon: const Icon(
+                            Icons.playlist_add_rounded,
                             size: 18,
-                            color: AppThemeTokens.textMuted,
                           ),
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
+                          label: const Text(
+                            'Playlist',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  SizedBox(
-                    height: 42,
-                    child: ElevatedButton.icon(
-                      onPressed: _submitSingleSong,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppThemeTokens.accentGreen,
-                        foregroundColor: AppThemeTokens.bgDeep,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                  if (isAdding)
+                    Container(
+                      margin: const EdgeInsets.only(top: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
                       ),
-                      icon: const Icon(Icons.add_rounded, size: 18),
-                      label: const Text(
-                        'Add',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  SizedBox(
-                    height: 42,
-                    child: OutlinedButton.icon(
-                      onPressed: widget.onOpenPlaylistModal,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppThemeTokens.accentEmerald,
-                        side: BorderSide(
-                          color: AppThemeTokens.accentEmerald
-                              .withValues(alpha: 0.45),
-                        ),
-                        backgroundColor: AppThemeTokens.accentEmerald
+                      decoration: BoxDecoration(
+                        color: AppThemeTokens.accentEmerald
                             .withValues(alpha: 0.10),
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: AppThemeTokens.accentEmerald
+                              .withValues(alpha: 0.28),
                         ),
                       ),
-                      icon: const Icon(Icons.playlist_add_rounded, size: 18),
-                      label: const Text(
-                        'Playlist',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      child: Row(
+                        children: [
+                          const SizedBox(
+                            width: 12,
+                            height: 12,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppThemeTokens.accentEmerald,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              pendingQuery.isNotEmpty
+                                  ? 'Adding song to queue: $pendingQuery'
+                                  : 'Adding song to queue...',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: AppThemeTokens.accentEmerald,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
                 ],
               ),
             );

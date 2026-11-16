@@ -20,6 +20,7 @@ class RoomStore {
   late final StatefulEntityController<QueueStateDto> playbackFsm;
   late final StatefulEntityController<LyricsData> lyricsFsm;
   late final StatefulEntityController<PlaylistPreviewResponse> playlistFsm;
+  late final StatefulEntityController<String> addSongFsm;
 
   final Signal<List<GuildSession>> guilds = signal(const []);
   final Signal<String?> currentGuildId = signal(null);
@@ -114,6 +115,9 @@ class RoomStore {
     );
     playlistFsm = StatefulEntityController<PlaylistPreviewResponse>(
       id: 'playlist_preview',
+    );
+    addSongFsm = StatefulEntityController<String>(
+      id: 'add_song',
     );
   }
 
@@ -451,6 +455,7 @@ class RoomStore {
   /// Adds a single song or search query to the queue, stripping any `&list=` parameters
   /// so playlists are never accidentally imported from the single-song input.
   Future<bool> addSingleSong(String rawInput) async {
+    if (addSongFsm.status.value == EntityStatus.loading) return false;
     final gid = currentGuildId.value;
     final trimmed = rawInput.trim();
     if (gid == null || trimmed.isEmpty) return false;
@@ -463,13 +468,28 @@ class RoomStore {
     }
 
     final cleanUrl = YouTubeUtils.stripPlaylistFromUrl(trimmed);
+    addSongFsm.transitionTo(
+      EntityStatus.loading,
+      reason: 'Submitting "$trimmed" to queue',
+      data: trimmed,
+    );
+    showNotice('Processing track request...');
     try {
       await _playbackQueue.addSong(gid, cleanUrl);
       songInput.value = '';
+      addSongFsm.transitionTo(
+        EntityStatus.idle,
+        reason: 'Track added to queue',
+      );
       showNotice('Added to queue!');
       await refreshQueueSnapshot(gid);
       return true;
     } catch (e) {
+      addSongFsm.transitionTo(
+        EntityStatus.error,
+        reason: 'Failed to add track: $e',
+        error: e.toString(),
+      );
       showNotice(e.toString());
       return false;
     }
@@ -551,6 +571,7 @@ class RoomStore {
     playbackFsm.dispose();
     lyricsFsm.dispose();
     playlistFsm.dispose();
+    addSongFsm.dispose();
     guilds.dispose();
     currentGuildId.dispose();
     roomView.dispose();

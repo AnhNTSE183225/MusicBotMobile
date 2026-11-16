@@ -129,8 +129,16 @@ class FakeMusicGateway
   @override
   Stream<QueueStateDto> watchQueueSse(String guildId) => sseController.stream;
 
+  int addSongCalls = 0;
+  Completer<void>? addSongCompleter;
+
   @override
-  Future<void> addSong(String guildId, String url) async {}
+  Future<void> addSong(String guildId, String url) async {
+    addSongCalls++;
+    if (addSongCompleter != null) {
+      await addSongCompleter!.future;
+    }
+  }
 
   @override
   Future<void> skip(String guildId) async {}
@@ -575,5 +583,39 @@ void main() {
         },
       );
     }
+  });
+
+  test('RoomStore addSingleSong exposes loading FSM and prevents duplicate spam', () async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    final db = AppDatabase(NativeDatabase.memory());
+    final gateway = FakeMusicGateway()..addSongCompleter = Completer<void>();
+    final roomStore = RoomStore(
+      guildVoice: gateway,
+      playbackQueue: gateway,
+      playlistGateway: gateway,
+      db: db,
+    );
+    roomStore.currentGuildId.value = 'g_1';
+
+    final firstFuture = roomStore.addSingleSong(
+      'https://www.youtube.com/watch?v=XUrmskUYoas',
+    );
+    expect(roomStore.addSongFsm.status.value, EntityStatus.loading);
+    expect(gateway.addSongCalls, 1);
+
+    // Spam call while still loading must be ignored
+    final duplicateAccepted = await roomStore.addSingleSong(
+      'https://www.youtube.com/watch?v=XUrmskUYoas',
+    );
+    expect(duplicateAccepted, isFalse);
+    expect(gateway.addSongCalls, 1);
+
+    gateway.addSongCompleter!.complete();
+    final firstOk = await firstFuture;
+    expect(firstOk, isTrue);
+    expect(roomStore.addSongFsm.status.value, EntityStatus.idle);
+
+    roomStore.dispose();
+    await db.close();
   });
 }
